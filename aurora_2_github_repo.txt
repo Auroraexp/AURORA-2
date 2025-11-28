@@ -1,0 +1,298 @@
+# AURORA-2 GitHub Repository
+
+This single-file code bundle contains the full MVP repo for AURORA-2. Copy each file into a real repository using the paths shown and push to GitHub. Follow the Deploy section at the end to get the free online demo on Render (backend) and Vercel (frontend).
+
+---
+
+=== README.md ===
+# AURORA-2 MVP
+
+Minimal working MVP for AURORA-2 (demo). Backend: FastAPI; Frontend: Next.js.
+
+## Repo structure
+```
+aurora2/
+├── backend/
+│   ├── main.py
+│   ├── aurora_solver.py
+│   ├── models/
+│   │   ├── kre.py
+│   │   ├── os_model.py
+│   │   └── aurelia.py
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── frontend/
+│   ├── package.json
+│   ├── pages/
+│   │    └── index.js
+│   └── public/
+│
+└── docs/
+    ├── deploy.md
+    └── api.md
+```
+
+## Quick start (local)
+1. Backend:
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+2. Frontend:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:3000 (frontend) and backend at http://localhost:8000
+
+---
+
+=== backend/requirements.txt ===
+fastapi
+uvicorn[standard]
+pydantic
+numpy
+scipy
+osqp
+scipy
+
+=== backend/Dockerfile ===
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . /app
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+=== backend/main.py ===
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from aurora_solver import aurora2_solve
+
+app = FastAPI(title="AURORA-2 API")
+
+class AuroraInput(BaseModel):
+    kre: float
+    os: float
+    aurelia: float
+    modifiers: dict = {}
+
+@app.get("/")
+def root():
+    return {"message": "AURORA-2 API running"}
+
+@app.post("/solve")
+def solve_aurora2(data: AuroraInput):
+    try:
+        output = aurora2_solve(
+            kre=data.kre,
+            os=data.os,
+            aurelia=data.aurelia,
+            modifiers=data.modifiers
+        )
+        return {"AURORA2_output": output}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+=== backend/aurora_solver.py ===
+import numpy as np
+
+# Simplified, numerically stable MVP core
+
+def aurora2_solve(kre, os, aurelia, modifiers=None):
+    """
+    AURORA-2 MVP core implementation.
+    Inputs: numeric scalars or small vectors (for MVP we use scalars).
+    Returns numeric output.
+    """
+    if modifiers is None:
+        modifiers = {}
+
+    alpha = float(modifiers.get("alpha", 1.12))
+    beta = float(modifiers.get("beta", 0.87))
+    eta = float(modifiers.get("eta", 1.03))
+
+    # safe numeric coercion
+    kre = float(kre)
+    os = float(os)
+    aurelia = float(aurelia)
+
+    # Core transform (smooth, avoids overflow)
+    a = np.power(abs(kre) + 1e-9, 0.38) * np.sign(kre)
+    b = np.power(abs(os) + 1e-9, 0.42) * np.sign(os)
+    c = np.power(abs(aurelia) + 1e-9, 0.56) * np.sign(aurelia)
+
+    # Combine and apply modifiers
+    value = (a * 0.9 + b * 0.95 + c * 1.05) * alpha * beta * eta
+
+    # Clip to reasonable range for demo
+    value = float(np.clip(value, -1e12, 1e12))
+
+    return round(value, 6)
+
+=== backend/models/kre.py ===
+# Placeholder for KRE expansion
+
+def generate_kre_vector(x):
+    # In MVP: treat x as scalar; a real implementation would accept vectors
+    return x * 0.9
+
+=== backend/models/os_model.py ===
+# Placeholder for OmniSphere minimal model
+
+def process_omnisphere(x_raw, intent_phi=None):
+    # Simple semantic modulation
+    phi = intent_phi or [0.0]
+    mod = sum(phi) * 0.01
+    return x_raw * (1.0 + mod)
+
+=== backend/models/aurelia.py ===
+# Placeholder for Aurelia risk aggregator
+
+def evaluate_aurelia(x_sem, context=None):
+    # returns a scalar risk score (0..1)
+    x = abs(x_sem)
+    score = min(1.0, x / (abs(x) + 10.0))
+    return score
+
+=== frontend/package.json ===
+{
+  "name": "aurora2-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000"
+  },
+  "dependencies": {
+    "next": "12.3.1",
+    "react": "17.0.2",
+    "react-dom": "17.0.2"
+  }
+}
+
+=== frontend/pages/index.js ===
+import { useState } from 'react'
+
+export default function Home() {
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const runSolver = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kre: 405.223485661,
+          os: 56.12332211,
+          aurelia: 500.000555112233,
+          modifiers: { alpha: 1.1, beta: 0.9, eta: 1.02 }
+        })
+      })
+      const data = await res.json()
+      setResult(data.AURORA2_output)
+    } catch (e) {
+      setResult('Error: ' + e.message)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ padding: 40, fontFamily: 'Inter, sans-serif' }}>
+      <h1>AURORA-2 MVP Demo</h1>
+      <p>Click the button to run the solver (demo inputs prefilled).</p>
+      <button onClick={runSolver} disabled={loading} style={{ padding: '10px 20px', fontSize: 16 }}>
+        {loading ? 'Running...' : 'Run Solver'}
+      </button>
+      {result && (
+        <div style={{ marginTop: 20 }}>
+          <strong>Result:</strong> {result}
+        </div>
+      )}
+      <p style={{ marginTop: 24, color: '#666' }}>Backend proxy is configured in Next.js API route.</p>
+    </div>
+  )
+}
+
+=== frontend/pages/api/proxy.js ===
+// Proxy route to backend (useful for Vercel to avoid CORS)
+export default async function handler(req, res) {
+  const payload = req.body
+  const BACKEND_URL = process.env.AURORA_BACKEND_URL || 'http://localhost:8000'
+  try {
+    const r = await fetch(BACKEND_URL + '/solve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    const data = await r.json()
+    res.status(200).json(data)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+}
+
+=== docs/deploy.md ===
+# Deploy guide
+
+## Backend (Render)
+1. Create a free Render account.
+2. New -> Web Service -> Connect GitHub repository -> select `backend` folder.
+3. Set the start command: `uvicorn main:app --host 0.0.0.0 --port 8000`.
+4. Set environment (Python 3.10) and deploy.
+
+## Frontend (Vercel)
+1. Create a free Vercel account.
+2. Import project -> choose `frontend` folder.
+3. Set environment variable `AURORA_BACKEND_URL` to the Render backend URL.
+4. Deploy. Frontend will be live on `*.vercel.app`.
+
+## Local run
+Follow README.md quick start section.
+
+=== docs/api.md ===
+# API
+
+## POST /solve
+Request JSON:
+```
+{
+  "kre": 405.223485661,
+  "os": 56.12332211,
+  "aurelia": 500.000555112233,
+  "modifiers": {"alpha":1.1}
+}
+```
+Response:
+```
+{"AURORA2_output": 12345.123456}
+```
+
+---
+
+# DEPLOYMENT / NEXT STEPS
+
+1) Copy this repo into GitHub.
+2) Create Render and Vercel accounts (free tiers).
+3) Deploy backend and frontend.
+4) Share the public URL.
+
+If you want, I can also:
+- provide a ZIP file for direct download,
+- generate GitHub Actions to auto-deploy,
+- create Docker Compose for local multi-service run.
+
+---
+
+If you want me to produce the actual ZIP file or push these files into a GitHub repo for you (I cannot push directly), I can produce a downloadable archive text or give exact `git` commands to run locally. Which do you prefer?
