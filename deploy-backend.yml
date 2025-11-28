@@ -1,0 +1,19 @@
+name: Build and Push Backend
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Build and push Docker image
+      run: |
+        docker build -t ${{ github.repository_owner }}/aurora-backend:latest ./backend
+        echo "Docker image built. Push to your registry or deploy manually."

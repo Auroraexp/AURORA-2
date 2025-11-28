@@ -1,28 +1,29 @@
-from fastapi import FastAPI, HTTPException
+# main.py
+from fastapi import FastAPI
 from pydantic import BaseModel
-from aurora_solver import aurora2_solve
+from fastapi.middleware.cors import CORSMiddleware
+from .model import aurora_step
 
-app = FastAPI(title="AURORA-2 API")
+app = FastAPI(title='AURORA-2 API')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class AuroraInput(BaseModel):
-    kre: float
-    os: float
-    aurelia: float
-    modifiers: dict = {}
+    x0: float
+    context: dict = {}
+    params: dict = {}
 
-@app.get("/")
-def root():
-    return {"message": "AURORA-2 API running"}
+@app.post('/aurora')
+async def aurora_endpoint(inp: AuroraInput):
+    res = aurora_step(inp.x0, inp.context, inp.params)
+    return res
 
-@app.post("/solve")
-def solve_aurora2(data: AuroraInput):
-    try:
-        output = aurora2_solve(
-            kre=data.kre,
-            os=data.os,
-            aurelia=data.aurelia,
-            modifiers=data.modifiers
-        )
-        return {"AURORA2_output": output}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get('/health')
+async def health():
+    return {"status":"ok"}

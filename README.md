@@ -1,46 +1,23 @@
-# AURORA-2 MVP
+# AURORA-2 Demo
 
-Minimal working MVP for AURORA-2 (demo). Backend: FastAPI; Frontend: Next.js.
+Демо на концептуалната архитектура AURORA-2 (KRE + OmniSphere + AURELIA).
 
-## Repo structure
-```
-aurora2/
-├── backend/
-│   ├── main.py
-│   ├── aurora_solver.py
-│   ├── models/
-│   │   ├── kre.py
-│   │   ├── os_model.py
-│   │   └── aurelia.py
-│   ├── requirements.txt
-│   └── Dockerfile
-│
-├── frontend/
-│   ├── package.json
-│   ├── pages/
-│   │    └── index.js
-│   └── public/
-│
-└── docs/
-    ├── deploy.md
-    └── api.md
-```
+## Цел
+Професионално демо, което визуализира работата на AURORA-2 и може да бъде хостнато публично.
 
-## Quick start (local)
-1. Backend:
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
-```
+## Локално стартиране
+1. Клонирай репото
+2. Backend:
+   - cd backend
+   - python -m venv venv && source venv/bin/activate
+   - pip install -r requirements.txt
+   - uvicorn app.main:app --reload --port 8000
+3. Frontend:
+   - cd frontend
+   - npm install
+   - npm run dev
+4. Отвори http://localhost:3000
 
-2. Frontend:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open http://localhost:3000 (frontend) and backend at http://localhost:8000
+## Деплой
+- Backend: Render.com / DigitalOcean App / Docker image
+- Frontend: Vercel (Next.js)
